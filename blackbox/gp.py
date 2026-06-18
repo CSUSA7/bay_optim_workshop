@@ -56,8 +56,12 @@ class GaussianProcess:
         """
         A = self._as_2d(A)
         B = self._as_2d(B)
-        # TODO: return the (len(A), len(B)) RBF covariance matrix.
-        raise NotImplementedError("Write the RBF kernel. See the docstring.")
+        # ||a - b||^2 = ||a||^2 + ||b||^2 - 2 a.b, computed for every pair at once
+        d2 = (np.sum(A ** 2, axis=1)[:, None]
+              + np.sum(B ** 2, axis=1)[None, :]
+              - 2.0 * A @ B.T)
+        d2 = np.maximum(d2, 0.0)
+        return self.signal_var * np.exp(-0.5 * d2 / self.lengthscale ** 2)
 
     def fit(self, X, y):
         """Store the data and factor the training covariance once.
@@ -91,8 +95,12 @@ class GaussianProcess:
         kernel, which is why the variance line is so short.
         """
         X_test = self._as_2d(X_test)
-        # TODO: return (mean, std) using self.L and self.alpha. See the docstring.
-        raise NotImplementedError("Write the posterior. See the docstring.")
+        K_s = self.kernel(self.X, X_test)          # (n, m)
+        mean = K_s.T @ self.alpha                  # (m,)
+        v = np.linalg.solve(self.L, K_s)           # (n, m)
+        var = self.signal_var - np.sum(v * v, axis=0)
+        std = np.sqrt(np.maximum(var, 1e-12))
+        return mean, std
 
     # ----- given helpers -----------------------------------------------------
 
@@ -126,5 +134,7 @@ class GaussianProcess:
             -0.5 * y^T alpha - sum(log(diag(L))) - 0.5 * n * log(2 pi).
         Delete the raise and return that once you want to try the bonus.
         """
-        # TODO (bonus): return the log marginal likelihood.
-        raise NotImplementedError("Bonus: write the log marginal likelihood.")
+        n = len(self.X)
+        return float(-0.5 * self.y @ self.alpha
+                     - np.sum(np.log(np.diag(self.L)))
+                     - 0.5 * n * np.log(2.0 * np.pi))
