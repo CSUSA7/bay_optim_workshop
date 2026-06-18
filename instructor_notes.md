@@ -54,11 +54,16 @@ sparser, default 0.16), `dim`, `decoy_strength`, and `base_counts`.
 - **Optuna objective.** Returning a single number for the multi-objective study,
   or forgetting `fast=True`.
 
+One thing to expect, not a bug: in Part 4 the TPE and random curves cross. Random
+is briefly ahead of TPE near trial 100 before TPE pulls clearly ahead by 150
+(about 1600 counts versus 1050). That crossover is normal and is good material
+for the Discuss prompt about parking in a mediocre region.
+
 ## The bridge to Module 6
 
 The last cell of Part 4 collects every trial into a table of voltages mapped to
 (Nx, Ny). That table is exactly the training set for the emulator in Module 6.
-Worth pausing on: the search and the emulator are two halves of one pipeline.
+It is worth pausing here: the search and the emulator are two halves of one pipeline.
 
 ## Regenerating the notebooks
 

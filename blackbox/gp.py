@@ -1,7 +1,7 @@
 """
 A Gaussian process you build yourself.
 
-This file is the heart of the morning. Two methods are left for you to write:
+This file is the core exercise of part 2. Two methods are left for you to write:
 the kernel and the posterior. The notebook for part 2 walks you through both,
 with the formulas and the array shapes you need. Everything else is here so you
 can test your work as you go.

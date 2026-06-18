@@ -122,8 +122,9 @@ def plot_pareto(objectives, ax=None, label=None, color=MODEL, show_front=True):
 
 
 def pareto_front(objectives):
-    """Non-dominated rows of an (n, 2) array, assuming both columns maximized."""
-    return _pareto_front_max(np.atleast_2d(np.asarray(objectives, dtype=float)))
+    """Non-dominated, de-duplicated rows of an (n, 2) array (both cols maximized)."""
+    F = _pareto_front_max(np.atleast_2d(np.asarray(objectives, dtype=float)))
+    return np.unique(F, axis=0)
 
 
 def _pareto_front_max(F):
