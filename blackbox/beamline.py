@@ -138,7 +138,7 @@ class VirtualBeamline:
     def evaluate(self, v, fast=False):
         """Measure one setting and return integer counts (Nx, Ny).
 
-        This is the call that costs you. Spend it wisely.
+        This is the call that costs you.
         """
         v = np.asarray(v, dtype=float).ravel()
         if v.shape[0] != self.dim:
