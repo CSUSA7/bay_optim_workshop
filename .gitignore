@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Optuna study databases written during the session
+*.db
+*.sqlite3
+
+# Anything students dump here while experimenting
+scratch/
+
+# Notebook generator and other authoring tooling (not part of the student repo)
+build/
+data/
