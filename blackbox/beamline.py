@@ -19,10 +19,15 @@ past a point, so there is a genuine trade-off to find. That is what makes the
 multi-objective part at the end interesting.
 
 The landscape is fixed by a structure seed, so every student sees the same
-problem. The measurement noise uses a separate generator that you control with
-the `seed` argument, so runs are reproducible when you want them to be.
+problem. The measurement noise is frozen per input and controlled by the
+`seed` argument: the same setting always returns the same counts, so repeated
+free `fast=True` calls cannot be averaged to cancel the noise and read off the
+clean signal. That is deliberately less realistic than a real detector (which
+gives fresh noise on every shot), so that the fast switch stays a debugging
+convenience and not a shortcut around the problem.
 """
 
+import hashlib
 import time
 import numpy as np
 
@@ -38,15 +43,20 @@ class VirtualBeamline:
         Wall-clock cost of one evaluation. Default 60.0. Set to 0.0 (or use
         the `fast` flag below) while you are writing and debugging your code.
     noise : bool
-        If True, counts are Poisson samples around the mean. If False, you get
-        the rounded mean counts (useful for sanity checks, not realistic).
+        If True, counts are Poisson samples around the mean, frozen per input
+        so repeated measurements of the same setting return the same counts. If
+        False, you get the rounded mean counts (useful for sanity checks, not
+        realistic).
     base_counts : float
         Peak count scale at the best setting.
     structure_seed : int
         Fixes the shape of the landscape. Leave it alone so everyone shares the
         same problem.
     seed : int or None
-        Seeds the measurement noise. None means nondeterministic noise.
+        Seeds the measurement noise. Because the noise is frozen per input, a
+        given seed reproduces the same noisy counts at every setting. None
+        draws one fresh noise realization for this object (still frozen per
+        input within its lifetime, but different from run to run).
     """
 
     def __init__(
@@ -66,6 +76,10 @@ class VirtualBeamline:
         self.upper = np.ones(self.dim)
         self.n_evals = 0
         self._rng = np.random.default_rng(seed)
+        # A stable base for the per-input noise. Derived from `seed`, so a given
+        # seed reproduces the same noisy landscape; with seed=None it is drawn
+        # once here, nondeterministic across runs but fixed for this object.
+        self._noise_base = int(self._rng.integers(0, 2 ** 63 - 1))
         self._build_structure(structure_seed)
 
     # ----- internal landscape ------------------------------------------------
@@ -135,10 +149,29 @@ class VirtualBeamline:
         out = np.stack([mean_x, mean_y], axis=-1)
         return out[0] if np.ndim(V) == 1 else out
 
+    def _counts(self, v, mean_x, mean_y):
+        """Poisson counts that are fixed for a given input setting.
+
+        The noise is a deterministic pseudo-random function of the input (and
+        this object's noise seed), so measuring the same voltages twice returns
+        the same counts. That removes a shortcut: with `fast=True` evaluations
+        free, a student could otherwise call one setting many times and average
+        to cancel the noise and recover the clean signal. A real detector hands
+        you fresh noise on every shot; we trade that realism for the teaching
+        invariant that the fast switch is only a debugging convenience.
+        """
+        digest = hashlib.sha256()
+        digest.update(np.ascontiguousarray(v, dtype=np.float64).tobytes())
+        digest.update(np.int64(self._noise_base).tobytes())
+        rng = np.random.default_rng(int.from_bytes(digest.digest()[:8], "little"))
+        return int(rng.poisson(mean_x)), int(rng.poisson(mean_y))
+
     def evaluate(self, v, fast=False):
         """Measure one setting and return integer counts (Nx, Ny).
 
-        This is the call that costs you.
+        This is the call that costs you. The noise is fixed per setting: the
+        same voltages always return the same counts, whether or not `fast` is
+        set, so you cannot average repeated free calls to wash the noise out.
         """
         v = np.asarray(v, dtype=float).ravel()
         if v.shape[0] != self.dim:
@@ -153,8 +186,7 @@ class VirtualBeamline:
         mean_x, mean_y = self._means(v)
         mean_x, mean_y = float(mean_x[0]), float(mean_y[0])
         if self.noise:
-            nx = int(self._rng.poisson(mean_x))
-            ny = int(self._rng.poisson(mean_y))
+            nx, ny = self._counts(v, mean_x, mean_y)
         else:
             nx = int(round(mean_x))
             ny = int(round(mean_y))
