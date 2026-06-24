@@ -47,17 +47,23 @@ class GaussianProcess:
         A has shape (n, d), B has shape (m, d). The result has shape (n, m).
 
         The squared-exponential kernel is
-            k(a, b) = signal_var * exp(-0.5 * ||a - b||^2 / lengthscale^2).
+            k(a, b) = signal_var^2 * exp(-0.5 * ||a - b||^2 / lengthscale^2).
 
         A clean way to get all the pairwise squared distances without a loop:
             ||a - b||^2 = ||a||^2 + ||b||^2 - 2 a . b
         Build that as an (n, m) array, clip any tiny negative values to zero,
         then apply the exponential.
         """
+    
         A = self._as_2d(A)
         B = self._as_2d(B)
-        # TODO: return the (len(A), len(B)) RBF covariance matrix.
-        raise NotImplementedError("Write the RBF kernel. See the docstring.")
+        sq_norm_A = np.sum(A**2, axis=1)[:, None]
+        sq_norm_B = np.sum(B**2, axis=1)[None, :]
+        sq_dists = sq_norm_A + sq_norm_B - 2 * A @ B.T
+        sq_dists = np.clip(sq_dists, 0, None)
+        return self.signal_var**2 * np.exp(-0.5 * sq_dists / self.lengthscale**2)
+        #return self.signal_var**2 * (1 + np.sqrt(3) * np.sqrt(sq_dists)/self.lengthscale) * np.exp(-np.sqrt(3) * np.sqrt(sq_dists)/self.lengthscale)
+
 
     def fit(self, X, y):
         """Store the data and factor the training covariance once.
@@ -92,7 +98,13 @@ class GaussianProcess:
         """
         X_test = self._as_2d(X_test)
         # TODO: return (mean, std) using self.L and self.alpha. See the docstring.
-        raise NotImplementedError("Write the posterior. See the docstring.")
+        #raise NotImplementedError("Write the posterior. See the docstring.")
+        K_s   = self.kernel(self.X, X_test)          #shape (n, m)
+        mean  = K_s.T @ self.alpha                   # length m
+        v     = np.linalg.solve(self.L, K_s)         #            shape (n, m)
+        var   = self.signal_var - np.sum(v * v, axis=0) #  length m
+        std   = np.sqrt(np.maximum(var, 1e-12))
+        return mean, std
 
     # ----- given helpers -----------------------------------------------------
 
@@ -127,4 +139,8 @@ class GaussianProcess:
         Delete the raise and return that once you want to try the bonus.
         """
         # TODO (bonus): return the log marginal likelihood.
-        raise NotImplementedError("Bonus: write the log marginal likelihood.")
+        #raise NotImplementedError("Bonus: write the log marginal likelihood.")
+        log_likelihood = -0.5 * self.y.T @ self.alpha
+        log_likelihood -= np.sum(np.log(np.diag(self.L)))
+        log_likelihood -= 0.5 * len(self.y) * np.log(2 * np.pi)
+        return log_likelihood
