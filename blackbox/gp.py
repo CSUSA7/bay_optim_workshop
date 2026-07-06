@@ -99,10 +99,10 @@ class GaussianProcess:
         X_test = self._as_2d(X_test)
         # TODO: return (mean, std) using self.L and self.alpha. See the docstring.
         #raise NotImplementedError("Write the posterior. See the docstring.")
-        K_s   = self.kernel(self.X, X_test)          #shape (n, m)
+        K_s   = self.kernel(self.X, X_test)          # shape (n, m)
         mean  = K_s.T @ self.alpha                   # length m
-        v     = np.linalg.solve(self.L, K_s)         #            shape (n, m)
-        var   = self.signal_var - np.sum(v * v, axis=0) #  length m
+        v     = np.linalg.solve(self.L, K_s)         # shape (n, m)
+        var   = self.signal_var**2 - np.sum(v * v, axis=0) # length m the sigma squared is missing
         std   = np.sqrt(np.maximum(var, 1e-12))
         return mean, std
 

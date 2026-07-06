@@ -1,0 +1,13 @@
+Correr SIMION desde Python
+
+Hacer optimización -> generar datos -> entrenar un D.T.
+
+buen DT: que tanto extrapola, que tanto control, siempre dentro de las bandas de error, rápido, diferenciable, buen R sqrt, ustedes escogen como optimizar. Algo que tenga sentido.
+
+RMSE + extrapolación + transmisión.
+
+ions que llegan
+
+distribución de los ions que llegan
+
+simula path de los ions
